@@ -30,7 +30,8 @@ log = logging.getLogger("push_receiver")
 
 class PushReceiver:
   READ_TIMEOUT_SECS = 60 * 60
-  MIN_RESET_INTERVAL_SECS = 60 * 5
+  MIN_RESET_INTERVAL_SECS = 5 * 60
+  MAX_SILENT_INTERVAL_SECS = 60 * 60
   MCS_VERSION = 41
 
   PACKET_BY_TAG = [
@@ -66,14 +67,12 @@ class PushReceiver:
 
     self.credentials = credentials
     self.persistent_ids = received_persistent_ids
+    self.time_last_message_received = time.time()
 
 
   def __del__(self):
-    try:
-      self.socket.shutdown(2)
-      self.socket.close()
-    except OSError as e:
-      log.debug(f"Unable to close connection {e}")
+    self.checkin_thread.cancel()
+    self.__close_socket()
 
 
   def __read(self, size):
@@ -131,18 +130,23 @@ class PushReceiver:
       if len(readable) == 0:
         log.debug("Select read timeout")
         return None
-    except select.error:
-      log.debug("Select error")
+    except select.error as e:
+      log.debug(f"Select error: {e}")
       return None
-    if first:
-      version, tag = struct.unpack("BB", self.__read(2))
-      log.debug("version {}".format(version))
-      if version < self.MCS_VERSION and version != 38:
-        raise RuntimeError("protocol version {} unsupported".format(version))
-    else:
-      tag, = struct.unpack("B", self.__read(1))
-    size = self.__read_varint32()
+    try:
+      if first:
+        version, tag = struct.unpack("BB", self.__read(2))
+        log.debug("version {}".format(version))
+        if version < self.MCS_VERSION and version != 38:
+          raise RuntimeError("protocol version {} unsupported".format(version))
+      else:
+        tag, = struct.unpack("B", self.__read(1))
+      size = self.__read_varint32()
+    except OSError as e:
+      log.debug(f"Read error: {e}")
+      return None
     log.debug("Received message with tag {} ({}), size {}".format(tag, self.PACKET_BY_TAG[tag], size))
+    self.time_last_message_received = time.time()
     if size >= 0:
       buf = self.__read(size)
       Packet = self.PACKET_BY_TAG[tag]
@@ -172,7 +176,7 @@ class PushReceiver:
     log.debug("connected to ssl socket")
 
 
-  def login(self):
+  def __login(self):
     self.__open()
     android_id = self.credentials["gcm"]["androidId"]
     req = LoginRequest()
@@ -199,12 +203,16 @@ class PushReceiver:
       raise Exception("Too many connection reset attempts.")
     self.last_reset = now
     log.debug("Reestablishing connection")
+    self.__close_socket()
+    self.__login()
+
+
+  def __close_socket(self):
     try:
       self.socket.shutdown(2)
       self.socket.close()
     except OSError as e:
       log.debug(f"Unable to close connection {e}")
-    return self.login()
 
 
   def __handle_data_message(self, p, callback, obj):
@@ -244,6 +252,17 @@ class PushReceiver:
     self.__send(req)
 
 
+  def __status_check(self):
+    time_since_last_message = time.time() - self.time_last_message_received
+    if (time_since_last_message > self.MAX_SILENT_INTERVAL_SECS):
+      log.info(f'No communications received in {time_since_last_message}s.  Resetting connection.')
+      self.__close_socket()
+      time_since_last_message = 0
+    expected_timeout = 1 + self.MAX_SILENT_INTERVAL_SECS - time_since_last_message
+    self.checkin_thread = threading.Timer(expected_timeout, self.__status_check)
+    self.checkin_thread.start()
+
+
   def listen(self, callback, obj=None):
     """
     listens for push notifications
@@ -251,7 +270,8 @@ class PushReceiver:
     callback(obj, notification, data_message): called on notifications
     obj: optional arbitrary value passed to callback
     """
-    self.login()
+    self.__login()
+    self.__status_check()
     while True:
       try:
         p = self.__recv()
@@ -266,4 +286,4 @@ class PushReceiver:
           log.debug(f'Unexpected message type {type(p)}.')
       except ConnectionResetError:
         log.debug("Connection Reset: Reconnecting")
-        self.login()
+        self.__login()
