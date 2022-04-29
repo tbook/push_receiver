@@ -157,7 +157,7 @@ class PushReceiver:
     return None
 
 
-  def __app_data_by_key(p, key, blow_shit_up=True):
+  def __app_data_by_key(self, p, key, blow_shit_up=True):
     for x in p.app_data:
       if x.key == key:
         return x.value
@@ -221,8 +221,8 @@ class PushReceiver:
     from cryptography.hazmat.backends import default_backend
     load_der_private_key = serialization.load_der_private_key
 
-    crypto_key = __app_data_by_key(p, "crypto-key")[3:]  # strip dh=
-    salt = __app_data_by_key(p, "encryption")[5:]  # strip salt=
+    crypto_key = self.__app_data_by_key(p, "crypto-key")[3:]  # strip dh=
+    salt = self.__app_data_by_key(p, "encryption")[5:]  # strip salt=
     crypto_key = urlsafe_b64decode(crypto_key.encode("ascii"))
     salt = urlsafe_b64decode(salt.encode("ascii"))
     der_data = self.credentials["keys"]["private"]

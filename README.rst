@@ -33,8 +33,7 @@ you can also run this example with this command (change the sender id)
 
 .. code-block:: python
 
-    from register import register
-    from push_receiver import PushReceiver
+    from push_receiver import PushReceiver, register
     import json
 
 
