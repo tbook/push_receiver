@@ -78,6 +78,6 @@ you can also run this example with this command (change the sender id)
       with open("persistent_ids.txt", "a+") as f:
         received_persistent_ids = [x.strip() for x in f]
 
-        receiver = PushReceiver(credentials, received_persistent_ids)
-        receiver.listen(on_notification)
+      receiver = PushReceiver(credentials, received_persistent_ids)
+      receiver.listen(on_notification)
 
