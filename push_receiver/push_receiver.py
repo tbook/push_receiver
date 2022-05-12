@@ -199,8 +199,10 @@ class PushReceiver:
 
   def __reset(self):
     now = time.time()
-    if (now - self.last_reset < self.MIN_RESET_INTERVAL_SECS):
-      raise Exception("Too many connection reset attempts.")
+    time_since_last_reset = now - self.last_reset
+    if (time_since_last_reset < self.MIN_RESET_INTERVAL_SECS):
+      log.debug(f"{time_since_last_reset}s since last reset attempt.")
+      time.sleep(self.MIN_RESET_INTERVAL_SECS - time_since_last_reset)
     self.last_reset = now
     log.debug("Reestablishing connection")
     self.__close_socket()
