@@ -15,7 +15,7 @@ with open("README.rst", "r") as f:
 
 setup(
     name="push_receiver",
-    version="0.3.0",
+    version="0.4.0",
     author="Franc[e]sco",
     author_email="lolisamurai@tfwno.gf",
     url="https://github.com/Francesco149/push_receiver",
