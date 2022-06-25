@@ -68,10 +68,12 @@ class PushReceiver:
     self.credentials = credentials
     self.persistent_ids = received_persistent_ids
     self.time_last_message_received = time.time()
+    self.checkin_thread = None
 
 
   def __del__(self):
-    self.checkin_thread.cancel()
+    if self.checkin_thread:
+      self.checkin_thread.cancel()
     self.__close_socket()
 
 
