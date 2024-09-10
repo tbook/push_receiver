@@ -24,7 +24,7 @@ setup(
     license="Unlicense",
     classifiers=push_receiver_classifiers,
     keywords="fcm gcm push notification firebase google",
-    install_requires=["oscrypto", "protobuf", "http-ece", "cryptography", "betterproto", "requests"],
+    install_requires=["oscrypto", "protobuf", "cryptography", "betterproto", "requests"],
     extras_require={
         "example": ["appdirs"]
     }

@@ -11,15 +11,10 @@ import struct
 import select
 from .mcs import *
 import logging
-from base64 import urlsafe_b64decode
-import json
 import time
 import threading
 import socket
 import ssl
-import http_ece
-import cryptography.hazmat.primitives.serialization as serialization
-from cryptography.hazmat.backends import default_backend
 
 try:
     FileExistsError
