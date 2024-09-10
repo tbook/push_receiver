@@ -208,27 +208,14 @@ class PushReceiver:
             log.debug(f"Unable to close connection {e}")
 
     def __handle_data_message(self, p, callback, obj):
-        load_der_private_key = serialization.load_der_private_key
 
-        crypto_key = self.__app_data_by_key(p, "crypto-key")[3:]  # strip dh=
-        salt = self.__app_data_by_key(p, "encryption")[5:]  # strip salt=
-        crypto_key = urlsafe_b64decode(crypto_key.encode("ascii"))
-        salt = urlsafe_b64decode(salt.encode("ascii"))
-        der_data = self.credentials["keys"]["private"]
-        der_data = urlsafe_b64decode(der_data.encode("ascii") + b"========")
-        secret = self.credentials["keys"]["secret"]
-        secret = urlsafe_b64decode(secret.encode("ascii") + b"========")
-        privkey = load_der_private_key(
-            der_data, password=None, backend=default_backend()
-        )
-        decrypted = http_ece.decrypt(
-            p.raw_data, salt=salt,
-            private_key=privkey, dh=crypto_key,
-            version="aesgcm",
-            auth_secret=secret
-        )
-        log.info(f'Received data message {p.persistent_id}: {decrypted}')
-        callback(obj, json.loads(decrypted.decode("utf-8")), p)
+        data = {}
+
+        for elem in p.app_data:
+            data[elem.key] = elem.value
+
+        log.info(f'Received data message {p.persistent_id}: {data}')
+        callback(obj, data, p)
         return p.persistent_id
 
     def __handle_ping(self, p):

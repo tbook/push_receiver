@@ -15,7 +15,7 @@ with open("README.rst", "r") as f:
 
 setup(
     name="rustPlusPushReceiver",
-    version="0.6.0",
+    version="0.6.1",
     author="Franc[e]sco & olijeffers0n",
     url="https://github.com/olijeffers0n/push_receiver",
     packages=find_packages("."),
